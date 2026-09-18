@@ -1,2 +1,6 @@
 .env
 AGENTS.md
+node_modules/
+.next/
+data/valhalla/
+public/vendor/maplibre/
