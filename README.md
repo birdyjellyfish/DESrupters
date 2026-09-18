@@ -1,5 +1,3 @@
-# README.md
-
 ## Smart Commuter Companion: AI-Driven Proactive Routing
 
 This mobile-first web application provides proactive decision support for commuters facing both planned and unplanned transport events. It transitions the commuter experience from reactive to proactive by analyzing calendar schedules, monitoring real-time transit telemetry, and delivering personalized, optimized routes before the commuter even reaches the platform. 

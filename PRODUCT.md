@@ -1,5 +1,3 @@
-# PRODUCT.md
-
 ## 1. System Architecture & Modularity
 
 The application is structured into five distinct, decoupled modules to allow parallel development by coding agents. This architecture ensures high-speed data ingestion without blocking the user interface, satisfying the strict performance requirements for mobile commuters.
