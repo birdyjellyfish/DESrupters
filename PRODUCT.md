@@ -1,70 +1,69 @@
-# TransitAI: Product & System Documentation
+# PRODUCT.md
 
-This document serves as the master blueprint for the coding agent. The application is modularized to ensure separation of concerns, maintainability, and parallel development.
+## 1. System Architecture & Modularity
 
----
+The application is structured into five distinct, decoupled modules to allow parallel development by coding agents. This architecture ensures high-speed data ingestion without blocking the user interface, satisfying the strict performance requirements for mobile commuters.
 
-## MODULE 1: Data Ingestion & Caching Layer (The "Nerve Center")
-**Purpose:** Handle all external public transport APIs efficiently without bottlenecking the app.
-**Stack:** Python FastAPI, Redis, background workers (Celery or APScheduler).
+## 2. Module 1: The Sensory Layer (Data Ingestion Pipeline)
 
-*   **Sub-Module 1.1: Polling Engine:** Background tasks that fetch data from LTA DataMall every 15-60 seconds.
-*   **Sub-Module 1.2: Redis Cache:** 
-    *   Stores `Public MRT service alerts` (TTL: 60s).
-    *   Stores `Real-time train arrivals` (TTL: 30s).
-    *   Stores `Bus service data for alternate routing` (TTL: 30s).
-*   **Data Normalization:** Converts raw API responses into standardized JSON formats for the Routing Engine.
+This backend Node.js worker continuously polls official endpoints, normalizes the data, and stores it in Redis for rapid frontend retrieval.
 
----
+*   **Disruption Feed Manager:** 
+    *   Polls `TrainServiceAlerts` strictly for scheduled works, early closures, and live delays. 
+    *   Parses the nested `AffectedSegments` list to extract `Line`, `Direction`, and mitigation details like `FreePublicBus` or `FreeMRTShuttle`.
+    *   **Data Normalization:** Maps line codes to a canonical table (e.g., standardizing `STL` from alerts and `SLRT` from crowding data to a single internal ID).
+*   **Crowding Telemetry Processor:**
+    *   Aggregates three distinct crowding signals: `PCDRealTime` (10-minute refresh) for live station loads, `PCDForecast` (30-minute intervals) for predictive alerts, and the `Load` field from `v3/BusArrival` (`SEA`, `SDA`, `LSD`) for vehicle occupancy.
+*   **Environmental & Infrastructure Sync:**
+    *   Ingests the data.gov.sg 2-hour nowcast for weather conditions.
+    *   Listens to `v2/FacilitiesMaintenance` for ad-hoc lift outages, triggering recalculations for accessibility-constrained users like the "Mdm Lim" persona.
 
-## MODULE 2: Core Routing & Preference Engine
-**Purpose:** Calculate the best path from A to B considering dynamic weights (user preferences) and live disruptions.
-**Stack:** FastAPI, Python (NetworkX/OSMnx for graph algorithms), PostGIS.
+## 3. Module 2: Geospatial & Custom Routing Engine (Valhalla + PostGIS)
 
-*   **Sub-Module 2.1: Graph Construction:** Builds a transit graph using the `Rail station GeoJson` and bus routes. 
-*   **Sub-Module 2.2: The Weighting Algorithm:** Modifies edge weights (travel time/cost) on the graph based on:
-    *   *Weather/Shelter:* Increases cost of outdoor walking edges if raining.
-    *   *Crowd Levels:* Increases cost of heavily congested bus/MRT edges.
-    *   *Disruptions:* Severes (removes) edges where MRT services are disrupted.
-*   **Sub-Module 2.3: Route Generation:** Runs A* or Dijkstra's algorithm on the modified graph to output top 3 routes (Fastest, Most Comfortable, Least Walking).
+This module handles the core "door-to-door" logic, heavily relying on OpenStreetMap data and LTA's geospatial overlays.
 
----
+*   **Geospatial Base:** 
+    *   Uses a Geofabrik extract of OpenStreetMap for Singapore. 
+    *   Must strictly display "© OpenStreetMap contributors" on the UI to comply with ODbL licensing.
+    *   Merges OSM with DataMall SHP layers: `CoveredLinkWay`, `TrainStationExit`, and `CyclingPath` for authoritative routing data.
+*   **Dynamic Costing Algorithms:** 
+    *   The routing engine utilizes dynamic penalty weights based on user preferences and live alerts.
+    *   *Weather Response:* If the 2-hour nowcast indicates rain, the engine drastically reduces the "cost" (weight) of edges mapped to `CoveredLinkWay`. 
+    *   *Crowd Response:* If a user (like the "Arjun" persona who optimizes for comfort) requests a route, stations flagged with an `h` (high) `CrowdLevel` from `PCDRealTime` receive a severe time penalty, forcing the engine to output bus or cycling alternatives.
+*   **Micro-Routing (Station Geometry):**
+    *   Uses `AmendmenttoMP2014RailStation.geojson` footprints to calculate exact walking times within stations.
+    *   Maps exact carriage/door positions to the closest `TrainStationExit` to provide the "fastest exit" feature.
 
-## MODULE 3: AI Calendar & Context Agent
-**Purpose:** Proactively plan trips based on the user's schedule.
-**Stack:** OpenAI API (Function Calling), Google Calendar / Microsoft Graph API integrations.
+## 4. Module 3: AI & Decision Engine
 
-*   **Sub-Module 3.1: Calendar Sync:** Fetches events with location tags for the next 24 hours.
-*   **Sub-Module 3.2: AI Intent Parser:** LLM parses the location strings into exact geocordinates (via Mapbox Geocoding API).
-*   **Sub-Module 3.3: Commute Scheduler:** Calculates "time-to-leave" based on output from Module 2 and sends push notifications (e.g., "Leave in 10 mins to catch the less crowded bus 196").
+This Python-based microservice handles predictive analytics, natural language processing, and advanced crowd control algorithms.
 
----
+*   **Proactive Calendar Evaluator:**
+    *   Ingests upcoming Google/Outlook calendar events. Uses `PCDForecast` and historical baselines from `PV/ODTrain` to detect if the user's standard commute will intersect with a planned road opening, scheduled maintenance, or abnormal crowd.
+*   **Distributed Rerouting Algorithm:**
+    *   When `TrainServiceAlerts` changes `Status` to `2` (disrupted), the system intercepts all active users heading toward the affected nodes.
+    *   Instead of defaulting everyone to the `FreeMRTShuttle` (which causes extreme localized crowding), the algorithm buckets users by destination and assigns diverging bus routes, walking paths, or OneMap routing API alternatives to balance network load (this is based on the preferences for travel)
 
-## MODULE 4: Micro-Optimization (Door & Transfer Mapping)
-**Purpose:** Save seconds on transfers by guiding users to the optimal train doors.
-**Stack:** Static Data Store (JSON/PostgreSQL).
+## 5. Module 4: User Profile & Preferences Manager
 
-*   **Sub-Module 4.1: Station Topography Mapping:** Maps specific exits and transfer escalators to specific train carriage/door numbers.
-*   **Sub-Module 4.2: Injection into Route:** Appends door recommendations to the final route steps (e.g., "Board carriage 3, door 2 for direct access to escalator at Bishan Interchange").
+This module tailors the journey output to the exact needs of specific commuter personas.
 
----
+*   **Preference Matrix:** Stores strict constraints versus soft preferences (amount of walking needed, wheelchair accessibility, sheltered walkways, amount of transfers needed).
+    * Preferences are stored in terms of floats from 0 to 1 (with 1 being heavily preferenced towards,
+    and 0 having no preference towards)
+*   **Persona Configurations:**
+    *   *Multi-Modal:* Enables multi-modal outputs (bike + LRT), strictly checks weather APIs, avoids `h` crowd levels, and evaluates `CyclingPath` data.
+    *   *Focussed:* Minimizes notifications. Only triggers a reroute or alert if a disruption causes a delay exceeding a configurable threshold (e.g., 10+ minutes).
+    *   *Accessibility:* Hard constraint on stairs. Requires `v2/FacilitiesMaintenance` lift status verification and strictly routes via `Footpath` and sheltered overhead bridges/underpasses with lifts.
+    *   *Custom*: Users are able to setup custom preferences for the different dimensions as listed in the preference matrix above. 
 
-## MODULE 5: Frontend Interface & Mapping
-**Purpose:** Provide a fast, intuitive, and interactive user experience.
-**Stack:** Next.js (App Router), Tailwind CSS, Zustand (State Management), Mapbox GL JS.
+## 6. Module 5: Mobile-First Frontend & Offline UI
 
-*   **Sub-Module 5.1: Interactive Map:** Renders base map, station GeoJSON, and polyline routes. Highlights disrupted lines in red.
-*   **Sub-Module 5.2: Trip Planner UI:** Inputs for origin/destination, sliders for preferences (Speed vs. Comfort vs. Walking).
-*   **Sub-Module 5.3: Itinerary View:** Step-by-step breakdown of the journey, including live countdowns and the door micro-optimization data.
-*   **Sub-Module 5.4: Disruption Banners:** Real-time WebSocket or SSE (Server-Sent Events) listener that flashes alerts if the user's *current* active route is suddenly disrupted.
+The presentation layer is optimized for one-handed operation on a mobile device in bright sunlight or underground.
 
----
-
-## API CONTRACTS (Internal)
-
-### 1. `POST /api/v1/route`
-*   **Payload:** `{ origin: [lat, lng], dest: [lat, lng], preferences: { speed: 0.8, shelter: 0.2, avoid_crowds: 0.9 } }`
-*   **Response:** `[ { path: [...], duration: 45, type: "Fastest" }, ... ]`
-
-### 2. `GET /api/v1/alerts/live`
-*   **Response:** `{ active_disruptions: [ { line: "EWL", type: "Delay", message: "+15 mins" } ] }`
+*   **Visual State Management:** 
+    *   Uses MapLibre GL JS to render the route. 
+    *   Affected segments (e.g., disrupted train lines) are visually contrasted against the alternative route to allow users to judge trade-offs instantly.
+*   **Offline Degradation (Underground Mode):** 
+    *   The frontend uses a Service Worker to cache the full JSON payload of the active journey, including alternate paths. 
+    *   When cellular signal drops between stations, the UI explicitly flags the data as cached/stale and allows the user to continue reviewing their route and exit strategy.
