@@ -1,0 +1,47 @@
+{
+  "name": "smart-commuter-companion",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "predev": "node scripts/prepare-maplibre.mjs",
+    "prebuild": "node scripts/prepare-maplibre.mjs",
+    "prestart": "node scripts/prepare-maplibre.mjs",
+    "dev": "node scripts/run-local.mjs dev",
+    "build": "next build",
+    "start": "node scripts/run-local.mjs start",
+    "lint": "next lint",
+    "data:import": "node scripts/import-spatial.mjs",
+    "data:crowds": "node --env-file=.env scripts/import-crowd-baselines.mjs",
+    "diagnose:crowds": "node --env-file=.env scripts/diagnose-crowds.mjs",
+    "monitor": "node --env-file=.env scripts/monitor-commutes.mjs",
+    "test": "jest --runInBand",
+    "setup": "node scripts/setup-local.mjs",
+    "submission:audit": "node scripts/audit-submission.mjs"
+  },
+  "dependencies": {
+    "csv-parse": "^7.0.2",
+    "fflate": "^0.8.3",
+    "ical.js": "^2.2.1",
+    "lucide-react": "^0.468.0",
+    "maplibre-gl": "^6.10.0",
+    "next": "^14.2.15",
+    "pg": "^8.23.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "redis": "^6.2.1",
+    "shpjs": "^6.2.0",
+    "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "autoprefixer": "^10.4.20",
+    "jest": "^30.5.2",
+    "jest-environment-jsdom": "^30.5.2",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.14"
+  },
+  "engines": {
+    "node": ">=22 <25"
+  }
+}

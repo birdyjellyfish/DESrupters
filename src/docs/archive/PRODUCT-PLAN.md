@@ -1,3 +1,7 @@
+# Archived design proposal
+
+This is the original proposal, not a description of completed functionality. See [WRITEUP.md](../../../WRITEUP.md) for the implemented architecture and limitations.
+
 ## 1. System Architecture & Modularity
 
 The application is structured into five distinct, decoupled modules to allow parallel development by coding agents. This architecture ensures high-speed data ingestion without blocking the user interface, satisfying the strict performance requirements for mobile commuters.
@@ -65,3 +69,5 @@ The presentation layer is optimized for one-handed operation on a mobile device 
 *   **Offline Degradation (Underground Mode):** 
     *   The frontend uses a Service Worker to cache the full JSON payload of the active journey, including alternate paths. 
     *   When cellular signal drops between stations, the UI explicitly flags the data as cached/stale and allows the user to continue reviewing their route and exit strategy.
+*   **Proactive Alerts**
+    * The user will be sent a notification by the web app when there is a change in the recommended route (due to unplanned events like service disruptions/inclement weather etc.). This notification should include the detour instructions as well as the reason for the detour. 

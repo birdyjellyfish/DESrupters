@@ -1,2 +1,17 @@
 .env
+.env.cloud
+.env.*
+!.env.example
+/submission/
+src/data/osm/
+src/data/uploads/
+wayfinder-upload.tar.gz
+.local/
+src/data/crowd-baselines.json
+src/data/crowd-baselines.json.tmp
 AGENTS.md
+node_modules/
+.next/
+.next-preview*/
+src/data/valhalla/
+src/public/vendor/maplibre/
