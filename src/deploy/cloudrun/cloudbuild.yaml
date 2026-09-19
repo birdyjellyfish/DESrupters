@@ -22,7 +22,14 @@ steps:
   - id: build
     name: gcr.io/cloud-builders/docker
     dir: src
-    args: ['build', '--platform=linux/amd64', '-f', 'deploy/cloudrun/Dockerfile', '--build-arg', 'NEXT_PUBLIC_MAP_STYLE_URL=${_MAP_STYLE_URL}', '-t', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$BUILD_ID', '.']
+    entrypoint: bash
+    env: ['MAP_STYLE_URL=${_MAP_STYLE_URL}']
+    args:
+      - -ceu
+      - |
+        # Apply the same allowlist on both legacy Docker builders and BuildKit.
+        cp deploy/cloudrun/Dockerfile.dockerignore .dockerignore
+        docker build --platform=linux/amd64 -f deploy/cloudrun/Dockerfile --build-arg "NEXT_PUBLIC_MAP_STYLE_URL=$$MAP_STYLE_URL" -t '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$BUILD_ID' .
   - id: push
     name: gcr.io/cloud-builders/docker
     args: ['push', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$BUILD_ID']
