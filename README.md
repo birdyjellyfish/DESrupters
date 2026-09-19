@@ -2,8 +2,6 @@
 
 Built for **Arjun**, a Punggol-to-one-north commuter who values predictable, less crowded journeys and can walk, cycle, take transit or leave later.
 
-[Source repository](https://github.com/birdyjellyfish/DESrupters) · [Write-up](WRITEUP.md) · [Submission checklist](src/docs/submission/CHECKLIST.md)
-
 ## Prerequisites
 
 - Node.js **22 LTS** and npm; the lockfile is included.
