@@ -1,0 +1,91 @@
+# Cloud Build trigger: repository root, main branch.
+# Override _MAP_STYLE_URL in the trigger. Other defaults target the user's lab.
+substitutions:
+  _REGION: asia-southeast1
+  _SERVICE: wayfinder
+  _REPOSITORY: wayfinder
+  _DATA_BUCKET: qwiklabs-gcp-02-09a07b4c9a6f-wayfinder-data
+  _DATA_PREFIX: routing-v1
+  _CLOUD_SQL_INSTANCE: qwiklabs-gcp-02-09a07b4c9a6f:asia-southeast1:wayfinder-db
+  _RUNTIME_SERVICE_ACCOUNT: wayfinder-runtime@qwiklabs-gcp-02-09a07b4c9a6f.iam.gserviceaccount.com
+  _MAP_STYLE_URL: SET_IN_TRIGGER
+steps:
+  - id: validate-map-setting
+    name: ubuntu:24.04
+    entrypoint: bash
+    env: ['MAP_STYLE_URL=${_MAP_STYLE_URL}']
+    args: ['-ceu', 'test -n "$$MAP_STYLE_URL" && test "$$MAP_STYLE_URL" != SET_IN_TRIGGER || { echo "Set _MAP_STYLE_URL in the trigger substitutions."; exit 1; }']
+  - id: download-routing-inputs
+    name: gcr.io/google.com/cloudsdktool/google-cloud-cli:stable
+    entrypoint: gcloud
+    args: ['storage', 'rsync', 'gs://${_DATA_BUCKET}/${_DATA_PREFIX}', 'src/data', '--recursive']
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    dir: src
+    args: ['build', '--platform=linux/amd64', '-f', 'deploy/cloudrun/Dockerfile', '--build-arg', 'NEXT_PUBLIC_MAP_STYLE_URL=${_MAP_STYLE_URL}', '-t', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$BUILD_ID', '.']
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args: ['push', '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$BUILD_ID']
+  # Import the source-controlled spatial data before exposing the new revision.
+  # Repeated imports atomically replace each derived layer; subscriptions persist.
+  - id: import-spatial-data
+    name: gcr.io/google.com/cloudsdktool/google-cloud-cli:stable
+    entrypoint: gcloud
+    args:
+      - run
+      - jobs
+      - deploy
+      - '${_SERVICE}-spatial-import'
+      - '--image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$BUILD_ID'
+      - '--region=${_REGION}'
+      - '--service-account=${_RUNTIME_SERVICE_ACCOUNT}'
+      - '--set-cloudsql-instances=${_CLOUD_SQL_INSTANCE}'
+      - '--set-secrets=DATABASE_URL=wayfinder-database-url:latest'
+      - '--command=node'
+      - '--args=scripts/import-spatial.mjs'
+      - '--cpu=1'
+      - '--memory=2Gi'
+      - '--tasks=1'
+      - '--max-retries=0'
+      - '--task-timeout=900s'
+      - '--execute-now'
+      - '--wait'
+      - '--quiet'
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/google-cloud-cli:stable
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - '${_SERVICE}'
+      - '--image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$BUILD_ID'
+      - '--region=${_REGION}'
+      - '--service-account=${_RUNTIME_SERVICE_ACCOUNT}'
+      - '--add-cloudsql-instances=${_CLOUD_SQL_INSTANCE}'
+      - '--update-secrets=DATABASE_URL=wayfinder-database-url:latest,LTA_ACCOUNT_KEY=wayfinder-lta-key:latest,ONEMAP_KEY=wayfinder-onemap-key:latest,VAPID_PUBLIC_KEY=wayfinder-vapid-public:latest,VAPID_PRIVATE_KEY=wayfinder-vapid-private:latest'
+      - '--update-env-vars=RUN_COMMUTE_MONITOR=true,VAPID_SUBJECT=https://example.com/wayfinder'
+      - '--port=8080'
+      - '--cpu=2'
+      - '--memory=4Gi'
+      - '--concurrency=8'
+      - '--min=1'
+      - '--max=2'
+      - '--execution-environment=gen2'
+      - '--no-cpu-throttling'
+      - '--allow-unauthenticated'
+      - '--quiet'
+  - id: set-public-origin
+    name: gcr.io/google.com/cloudsdktool/google-cloud-cli:stable
+    entrypoint: bash
+    env: ['SERVICE=${_SERVICE}', 'REGION=${_REGION}']
+    args:
+      - -ceu
+      - |
+        public_url="$$(gcloud run services describe "$$SERVICE" --region="$$REGION" --format='value(status.url)')"
+        test -n "$$public_url"
+        gcloud run services update "$$SERVICE" --region="$$REGION" --update-env-vars="PUBLIC_APP_URL=$$public_url,VAPID_SUBJECT=$$public_url" --quiet
+images: ['${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$BUILD_ID']
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
+timeout: 1800s

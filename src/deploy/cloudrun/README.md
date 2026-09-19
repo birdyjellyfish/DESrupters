@@ -40,6 +40,8 @@ Start with **2 vCPU, 4 GiB memory, concurrency 8 and generation 2**; this is a s
 
 ## Image deployment versus GitHub
 
+The [GitHub setup for your project](GITHUB-SETUP.md) includes Cloud SQL creation, the routing-data upload script and the custom Cloud Build trigger. Use `src/deploy/cloudrun/cloudbuild.yaml` as the trigger's configuration file, not the Dockerfile-only wizard.
+
 Use this local image for the first deployment: tag it for Artifact Registry, push it, then select it in Cloud Run. No source archive is required. GitHub integration still builds and deploys a container; it does not supply the ignored routing files. For later CI/CD, keep the source on GitHub and fetch the dataset from Cloud Storage in the build, or copy it from a versioned dataset image in Artifact Registry. Do not commit the graph/PBF to Git.
 
 ```powershell
