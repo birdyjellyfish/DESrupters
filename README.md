@@ -4,8 +4,6 @@ Built for **Arjun**, a Punggol-to-one-north commuter who values predictable, les
 
 [Source repository](https://github.com/birdyjellyfish/DESrupters) · [Write-up](WRITEUP.md) · [Submission checklist](src/docs/submission/CHECKLIST.md)
 
-**Demo recording: pending.** Add the actual playable recording URL here before submission. The repository link is not a recording. The included disruption scenario is clearly labelled synthetic, not a captured real incident.
-
 ## Prerequisites
 
 - Node.js **22 LTS** and npm; the lockfile is included.
