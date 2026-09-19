@@ -77,24 +77,6 @@ The [synthetic alert fixture](src/data/fixtures/punggol-lrt-disruption.json) and
 
 Home/work, preferences, imported events and saved journeys stay on the device. Calendar integration is **ICS import**, not connected Google/Outlook accounts. Background notifications need opt-in, a running monitor and a working push service. Databases/private settings are not submitted. Cached journey text survives offline; uncached basemap tiles may not.
 
-## Verify before submission
-
-For the combined app/Valhalla Cloud Run image, see [container build and runtime requirements](src/deploy/cloudrun/README.md) and [local image verification](src/docs/CLOUD-RUN-VERIFICATION.md). The graph and source PBF are included in that image but remain excluded from Git.
-
-Run inside `src/`:
-
-```bash
-npm test
-npm run build
-npm run submission:audit
-```
-
-Submit the repository itself; no source archive or export step is needed. Git ignores private credentials, runtime state, dependencies, builds, OSM downloads and generated Valhalla tiles. The supplied spatial ZIPs are input datasets used by the importer and remain in `src/data/spatial/`. Commit/push final changes before asking judges to clone.
-
-The audit checks import resolution/casing, manifest assets, templates, symlinks and selected credential patterns in source/reachable text history. It is not a complete security certification. Running it creates `src/docs/REFERENCE-AUDIT.md`.
-
-See [verification results](src/docs/submission/VERIFICATION.md) for completed checks and their limits.
-
 ## Repository map
 
 ```text
@@ -115,4 +97,5 @@ DESrupters/
     └── …                 Next.js, Docker and test configuration
 ```
 
-Use [WRITEUP.md](WRITEUP.md) for completed functionality; the archived proposal contains unimplemented ambitions. The demo recording and a real-phone check remain pending.
+## Demo
+https://youtu.be/zaRmnHdUYxo

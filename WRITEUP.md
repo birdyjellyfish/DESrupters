@@ -1,10 +1,25 @@
 # Wayfinder
 
+## Features
+Our Wayfinder app is designed around the needs of Arjun, an active commuter. It focuses on three main features: calendar integration, preference-based routing, and smart disruption management.
+Calendar Integration: Wayfinder allows users to upload calendar files exported from their existing calendar apps. It automatically identifies upcoming events and their locations, then uses its Valhalla-based routing engine to recommend an appropriate route and departure time.
+Preference-Based Routing: During onboarding, users answer a series of questions about their commuting preferences, such as their priorities for comfort, speed, predictability, and crowding. Wayfinder uses these preferences to personalise route recommendations, rather than simply suggesting the fastest available route.
+Smart Disruption Management: When disruptions such as service delays or severe weather affect a journey, Wayfinder proactively recommends alternative routes. Instead of directing every affected commuter towards the same alternative, users travelling along the affected segment can be distributed across different viable detours. This helps reduce the risk of overcrowding at particular alternatives, such as rail replacement shuttle services. Wayfinder then notifies each user of the disruption and provides a recommended detour that considers both current conditions and their travel preferences.
+
 ## Persona
 
-Arjun commutes from Punggol to one-north with a folding bicycle. He values comfort and predictability, and can adjust departure within roughly an hour. Wayfinder combines schedules, disruptions, crowds, weather and preferences into one recommendation, with alternatives one tap away.
+Here’s a smoother and more professional version that keeps your original meaning while making the demo flow more naturally:
+Scene 1 — Planning the Journey
+The first scene of the demo depicts Arjun adding the Nebulax event to his calendar a day in advance. Arjun can sync his calendar events with Wayfinder, allowing it to recommend a suitable departure time and route based on his preferences, prioritising comfort and predictability.
+Scene 2 — Timely Departure Reminder
+The second scene shows Wayfinder reminding Arjun to leave for the LRT 15 minutes before it arrives. This gives him sufficient time to reach the station without rushing or waiting unnecessarily.
+Scene 3 — Responding to Disruptions
+The third scene shows Arjun receiving a notification from Wayfinder about an unexpected LRT disruption affecting his journey. Wayfinder automatically recommends an alternative route aligned with Arjun’s travel preferences, while still giving him the flexibility to explore and select other available routes.
+Arjun follows the recommended alternative and cycles to Punggol MRT station, minimising the impact of the disruption on his journey.
+Final Scene — Personalised Onboarding
+The final scene demonstrates Wayfinder’s onboarding process and Arjun’s customised travel profile. His preferences, such as prioritising comfort and predictability, are used by Wayfinder to personalise future route recommendations and travel alerts.
 
-The demo uses Waterway Sunrise II (824654) and Fusionopolis. Locations and mapped routes are real; the LRT suspension and rain switches are labelled **synthetic demonstrations**, not records of an actual incident.
+
 
 ## Implemented architecture
 
@@ -14,6 +29,7 @@ The demo uses Waterway Sunrise II (824654) and Fusionopolis. Locations and mappe
 - **PostGIS:** supplied spatial layers, projected for metre-based overlap calculations and spatially indexed. Station footprints are polygons, not entrances.
 - **Redis:** cached feeds, with a bounded in-process fallback.
 - **Worker:** opt-in commute checks and Web Push. The combined Cloud Run image can start it alongside the web server; a PostgreSQL advisory lock coordinates checks between instances. The Compose setup keeps it in a separate container.
+- **GCP:** We make use of Google Cloud Run to host the Valhalla server and Next.js server, limiting the amount of resources needed locally on the mobile device.
 
 ## Assumptions and evidence
 
@@ -34,9 +50,3 @@ Evidence is reproducible with `npm test` and `npm run build` from `src/`. Mocked
 - Offline journey text can survive lost connectivity; new routes and uncached tiles require a connection.
 - Live providers require registration/keys. Tests need no paid API access; optional cloud hosting incurs infrastructure charges.
 - Phone-sized browser checks have been performed; a recorded real-phone run and demo link are pending.
-
-## Submission status
-
-Repository: https://github.com/birdyjellyfish/DESrupters
-
-Recording: **pending**. Follow `src/docs/submission/DEMO.md` and add a playable link. This is not a completed video submission. If organisers require captured evidence of a real disruption in addition to the labelled injected scenario, it remains to be collected.
