@@ -1,0 +1,20 @@
+{
+  "value": {
+    "Status": 2,
+    "AffectedSegments": [
+      {
+        "Line": "PTL",
+        "Direction": "Both",
+        "Stations": "PTC,PE1,PE2,PE3,PE4,PE5,PE6,PE7,PW1,PW2,PW3,PW4,PW5,PW6,PW7",
+        "FreePublicBus": "N",
+        "FreeMRTShuttle": "N"
+      }
+    ],
+    "Message": [
+      {
+        "Content": "Demo: Punggol LRT service suspended on both loops. Use a bus or cycle to Punggol MRT.",
+        "CreatedDate": "2026-09-19T00:00:00.000Z"
+      }
+    ]
+  }
+}

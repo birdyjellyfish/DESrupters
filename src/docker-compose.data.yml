@@ -1,0 +1,30 @@
+name: desrupters
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_DB: wayfinder
+      POSTGRES_USER: wayfinder
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wayfinder-local-only}
+    volumes:
+      - wayfinder-spatial:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wayfinder -d wayfinder"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - wayfinder-cache:/data
+volumes:
+  wayfinder-spatial:
+  wayfinder-cache:

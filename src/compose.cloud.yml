@@ -1,0 +1,102 @@
+name: wayfinder
+
+x-app: &app
+  image: wayfinder-app:local
+  env_file: ${APP_ENV_FILE:-.env.cloud}
+  environment:
+    NODE_ENV: production
+    DATABASE_URL: postgresql://wayfinder:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/wayfinder
+    REDIS_URL: redis://redis:6379
+    VALHALLA_URL: http://valhalla:8002
+    PUBLIC_APP_URL: https://${APP_DOMAIN:?Set APP_DOMAIN}
+  volumes:
+    - ./data:/app/data
+    - ./.local:/app/.local
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    valhalla:
+      condition: service_started
+
+services:
+  web:
+    <<: *app
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_MAP_STYLE_URL: ${NEXT_PUBLIC_MAP_STYLE_URL:?Set the map style URL}
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+  monitor:
+    <<: *app
+    command: [node, scripts/monitor-commutes.mjs]
+  postgres:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: wayfinder
+      POSTGRES_USER: wayfinder
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes:
+      - spatial:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U wayfinder -d wayfinder"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: [redis-server, --appendonly, 'yes', --maxmemory, 256mb, --maxmemory-policy, allkeys-lru]
+    volumes:
+      - cache:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  valhalla:
+    image: ghcr.io/valhalla/valhalla-scripted:latest
+    restart: unless-stopped
+    volumes:
+      - ./data/valhalla:/custom_files
+    environment:
+      tile_urls: ''
+      server_threads: 2
+      serve_tiles: 'True'
+      use_tiles_ignore_pbf: 'True'
+      tileset_name: valhalla_tiles
+      build_elevation: 'False'
+      build_admins: 'False'
+      build_time_zones: 'False'
+      build_transit: 'False'
+      build_tar: 'True'
+      force_rebuild: 'False'
+      update_existing_config: 'True'
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN}
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+volumes:
+  spatial:
+  cache:
+  caddy-data:
+  caddy-config:
