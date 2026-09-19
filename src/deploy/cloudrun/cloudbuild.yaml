@@ -87,5 +87,4 @@ steps:
 images: ['${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$BUILD_ID']
 options:
   logging: CLOUD_LOGGING_ONLY
-  machineType: E2_HIGHCPU_8
 timeout: 1800s
